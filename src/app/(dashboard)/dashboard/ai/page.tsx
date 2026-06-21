@@ -30,6 +30,7 @@ export default function AiStudioPage() {
     length: "MEDIUM" as AiLength,
     language: "en",
     topic: "",
+    provider: "ANTHROPIC" as "ANTHROPIC" | "OPENAI",
   });
   const [result, setResult] = useState<GenerationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -71,12 +72,22 @@ export default function AiStudioPage() {
         <Card>
           <CardHeader><CardTitle>Generate</CardTitle></CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>Content type</Label>
-              <Select value={form.contentKind}
-                onChange={(e) => setForm({ ...form, contentKind: e.target.value as AiContentKind })}>
-                {KINDS.map((k) => <option key={k} value={k}>{pretty(k)}</option>)}
-              </Select>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Content type</Label>
+                <Select value={form.contentKind}
+                  onChange={(e) => setForm({ ...form, contentKind: e.target.value as AiContentKind })}>
+                  {KINDS.map((k) => <option key={k} value={k}>{pretty(k)}</option>)}
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>AI model</Label>
+                <Select value={form.provider}
+                  onChange={(e) => setForm({ ...form, provider: e.target.value as "ANTHROPIC" | "OPENAI" })}>
+                  <option value="ANTHROPIC">Claude (Anthropic)</option>
+                  <option value="OPENAI">ChatGPT (OpenAI)</option>
+                </Select>
+              </div>
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-2">
