@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { api, apiErrorMessage } from "@/lib/api";
@@ -13,9 +13,15 @@ function VerifyInner() {
   const token = params.get("token");
   const [state, setState] = useState<"loading" | "ok" | "error">("loading");
   const [error, setError] = useState("");
+  // The verification token is single-use: it is consumed (and invalidated) by the
+  // first POST. React StrictMode in dev runs effects twice, which would fire a second
+  // POST that fails with auth.token_invalid. Guard so we only ever call once.
+  const verified = useRef(false);
 
   useEffect(() => {
     if (!token) { setState("error"); setError("Missing token"); return; }
+    if (verified.current) return;
+    verified.current = true;
     api.post("/auth/verify-email", { token })
       .then(() => setState("ok"))
       .catch((err) => { setState("error"); setError(apiErrorMessage(err)); });
