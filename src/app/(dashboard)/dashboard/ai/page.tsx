@@ -30,7 +30,7 @@ export default function AiStudioPage() {
     length: "MEDIUM" as AiLength,
     language: "en",
     topic: "",
-    provider: "ANTHROPIC" as "ANTHROPIC" | "OPENAI",
+    provider: "ANTHROPIC" as "ANTHROPIC" | "OPENAI" | "GEMINI",
   });
   const [result, setResult] = useState<GenerationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -83,9 +83,10 @@ export default function AiStudioPage() {
               <div className="space-y-2">
                 <Label>AI model</Label>
                 <Select value={form.provider}
-                  onChange={(e) => setForm({ ...form, provider: e.target.value as "ANTHROPIC" | "OPENAI" })}>
+                  onChange={(e) => setForm({ ...form, provider: e.target.value as "ANTHROPIC" | "OPENAI" | "GEMINI" })}>
                   <option value="ANTHROPIC">Claude (Anthropic)</option>
                   <option value="OPENAI">ChatGPT (OpenAI)</option>
+                  <option value="GEMINI">Gemini (Google)</option>
                 </Select>
               </div>
             </div>
