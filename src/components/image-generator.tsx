@@ -19,14 +19,25 @@ export function ImageGenerator({ kind }: { kind: "LOGO" | "BANNER" }) {
   const qc = useQueryClient();
   const [prompt, setPrompt] = useState("");
   const [image, setImage] = useState<{ id: string } | null>(null);
+  const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const label = kind === "LOGO" ? "logo" : "banner";
 
   const generate = useMutation({
-    mutationFn: async () =>
-      unwrap<{ id: string }>(
+    mutationFn: async () => {
+      if (file) {
+        const fd = new FormData();
+        fd.append("kind", kind);
+        fd.append("prompt", prompt);
+        fd.append("image", file);
+        return unwrap<{ id: string }>(
+          (await api.post(`/workspaces/${current!.id}/ai/images/edit`, fd)).data,
+        );
+      }
+      return unwrap<{ id: string }>(
         (await api.post(`/workspaces/${current!.id}/ai/images`, { kind, prompt })).data,
-      ),
+      );
+    },
     onSuccess: (data) => {
       setImage(data);
       setError(null);
@@ -47,20 +58,34 @@ export function ImageGenerator({ kind }: { kind: "LOGO" | "BANNER" }) {
         <CardHeader><CardTitle className="capitalize">Generate {label}</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label>Describe your {label}</Label>
+            <Label>{file ? `How should we improve your ${label}? (optional)` : `Describe your ${label}`}</Label>
             <Textarea
-              rows={6}
-              placeholder={kind === "LOGO"
+              rows={5}
+              placeholder={file
+                ? "e.g. make it cleaner and more modern, keep the colors"
+                : kind === "LOGO"
                 ? "e.g. a minimalist purple sparkle icon for an AI marketing app called Zyntral"
                 : "e.g. a sleek dark-purple header with abstract AI shapes for a product launch"}
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
             />
           </div>
+          <div className="space-y-2">
+            <Label>Improve an existing image (optional)</Label>
+            <input type="file" accept="image/*"
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border file:bg-secondary file:px-3 file:py-1.5 file:text-sm" />
+            {file && (
+              <p className="text-xs text-muted-foreground">
+                Improving <span className="font-medium">{file.name}</span> ·{" "}
+                <button type="button" className="underline" onClick={() => setFile(null)}>remove</button>
+              </p>
+            )}
+          </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
-          <Button className="w-full" disabled={!prompt || generate.isPending} onClick={() => generate.mutate()}>
+          <Button className="w-full" disabled={(!prompt && !file) || generate.isPending} onClick={() => generate.mutate()}>
             <Sparkles className="h-4 w-4" />
-            {generate.isPending ? "Generating…" : `Generate ${label}`}
+            {generate.isPending ? "Working…" : file ? `Improve ${label}` : `Generate ${label}`}
           </Button>
           <p className="text-xs text-muted-foreground">Uses your OpenAI image credits.</p>
         </CardContent>
