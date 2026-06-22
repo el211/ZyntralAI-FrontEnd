@@ -13,11 +13,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Sparkles, Copy, Send } from "lucide-react";
 import { ImageGenerator } from "@/components/image-generator";
+import { VideoGenerator } from "@/components/video-generator";
 
 const TABS = [
   { id: "TEXT", label: "Text" },
   { id: "LOGO", label: "Logo" },
   { id: "BANNER", label: "Banner" },
+  { id: "VIDEO", label: "Video" },
 ] as const;
 type StudioTab = (typeof TABS)[number]["id"];
 
@@ -93,7 +95,8 @@ export default function AiStudioPage() {
         ))}
       </div>
 
-      {tab !== "TEXT" && <ImageGenerator kind={tab} />}
+      {(tab === "LOGO" || tab === "BANNER") && <ImageGenerator kind={tab} />}
+      {tab === "VIDEO" && <VideoGenerator />}
 
       {tab === "TEXT" && (
       <div className="grid gap-6 lg:grid-cols-2">
