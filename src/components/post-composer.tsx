@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, unwrap, apiErrorMessage } from "@/lib/api";
 import { useWorkspace } from "@/lib/workspace";
+import { imageUrl } from "@/components/image-generator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,6 +45,7 @@ export function PostComposer({
   const [selected, setSelected] = useState<string[]>([]);
   const [scheduledAt, setScheduledAt] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -51,6 +53,23 @@ export function PostComposer({
       setMediaUrl(initialMediaUrl ?? null);
     }
   }, [open, initialBody, initialMediaUrl]);
+
+  async function onPickImage(f: File) {
+    setUploading(true);
+    setError(null);
+    try {
+      const fd = new FormData();
+      fd.append("image", f);
+      const { id } = unwrap<{ id: string }>(
+        (await api.post(`/workspaces/${current!.id}/ai/images/upload`, fd)).data,
+      );
+      setMediaUrl(imageUrl(id));
+    } catch (e) {
+      setError(apiErrorMessage(e));
+    } finally {
+      setUploading(false);
+    }
+  }
 
   const { data: accounts = [] } = useQuery({
     queryKey: ["social-accounts", current?.id],
@@ -121,7 +140,7 @@ export function PostComposer({
             <Label htmlFor="post-body">Content</Label>
             <Textarea id="post-body" rows={8} value={body} onChange={(e) => setBody(e.target.value)} />
           </div>
-          {mediaUrl && (
+          {mediaUrl ? (
             <div className="space-y-2">
               <Label>Attached image</Label>
               <div className="relative w-fit">
@@ -130,6 +149,15 @@ export function PostComposer({
                 <button type="button" onClick={() => setMediaUrl(null)}
                   className="absolute right-1 top-1 rounded bg-background/80 px-1.5 py-0.5 text-xs">Remove</button>
               </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Label>Add an image (optional)</Label>
+              <input type="file" accept="image/*" disabled={uploading}
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) onPickImage(f); }}
+                className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border file:bg-secondary file:px-3 file:py-1.5 file:text-sm" />
+              {uploading && <p className="text-xs text-muted-foreground">Uploading…</p>}
+              <p className="text-xs text-muted-foreground">Or generate one in AI Studio / pick from the Library.</p>
             </div>
           )}
           <div className="space-y-2">
