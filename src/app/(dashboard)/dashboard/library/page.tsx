@@ -1,13 +1,13 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { api, unwrap } from "@/lib/api";
 import { useWorkspace } from "@/lib/workspace";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { imageUrl } from "@/components/image-generator";
-import { Download, Send } from "lucide-react";
+import { imageUrl, removeBgFromUrl } from "@/components/image-generator";
+import { Download, Send, Scissors } from "lucide-react";
 
 interface ImageItem {
   id: string;
@@ -19,12 +19,18 @@ interface ImageItem {
 export default function LibraryPage() {
   const { current } = useWorkspace();
   const router = useRouter();
+  const qc = useQueryClient();
 
   const { data: images = [] } = useQuery({
     queryKey: ["ai-images", current?.id],
     enabled: !!current,
     queryFn: async () =>
       unwrap<ImageItem[]>((await api.get(`/workspaces/${current!.id}/ai/images`)).data),
+  });
+
+  const removeBg = useMutation({
+    mutationFn: (id: string) => removeBgFromUrl(current!.id, imageUrl(id)),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["ai-images", current?.id] }),
   });
 
   function attachToPost(id: string) {
@@ -53,8 +59,12 @@ export default function LibraryPage() {
                   <span className="rounded-full bg-secondary px-2 py-0.5 text-xs">{img.kind}</span>
                   <div className="flex gap-1">
                     <a href={imageUrl(img.id)} download={`${img.kind.toLowerCase()}.png`} target="_blank" rel="noreferrer">
-                      <Button variant="ghost" size="sm"><Download className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="sm" title="Download"><Download className="h-4 w-4" /></Button>
                     </a>
+                    <Button variant="ghost" size="sm" title="Remove background"
+                      disabled={removeBg.isPending} onClick={() => removeBg.mutate(img.id)}>
+                      <Scissors className="h-4 w-4" />
+                    </Button>
                     <Button size="sm" onClick={() => attachToPost(img.id)}>
                       <Send className="h-4 w-4" /> Use
                     </Button>

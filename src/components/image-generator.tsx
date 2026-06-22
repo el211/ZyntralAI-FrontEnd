@@ -13,6 +13,16 @@ import { Sparkles, Download, Send } from "lucide-react";
 
 export const imageUrl = (id: string) => `${API_URL}/ai-images/${id}`;
 
+/** Fetch an image's bytes and ask the backend to return a transparent (background-removed) copy. */
+export async function removeBgFromUrl(workspaceId: string, url: string) {
+  const blob = await fetch(url).then((r) => r.blob());
+  const fd = new FormData();
+  fd.append("image", blob, "image.png");
+  return unwrap<{ id: string }>(
+    (await api.post(`/workspaces/${workspaceId}/ai/images/remove-background`, fd)).data,
+  );
+}
+
 export function ImageGenerator({ kind }: { kind: "LOGO" | "BANNER" }) {
   const { current } = useWorkspace();
   const router = useRouter();
@@ -45,6 +55,29 @@ export function ImageGenerator({ kind }: { kind: "LOGO" | "BANNER" }) {
     },
     onError: (err) => setError(apiErrorMessage(err)),
   });
+
+  const removeBg = useMutation({
+    mutationFn: async (source: File | string) => {
+      const fd = new FormData();
+      if (typeof source === "string") {
+        const blob = await fetch(source).then((r) => r.blob());
+        fd.append("image", blob, "image.png");
+      } else {
+        fd.append("image", source);
+      }
+      return unwrap<{ id: string }>(
+        (await api.post(`/workspaces/${current!.id}/ai/images/remove-background`, fd)).data,
+      );
+    },
+    onSuccess: (data) => {
+      setImage(data);
+      setError(null);
+      qc.invalidateQueries({ queryKey: ["ai-images", current?.id] });
+    },
+    onError: (err) => setError(apiErrorMessage(err)),
+  });
+
+  const busy = generate.isPending || removeBg.isPending;
 
   function attachToPost() {
     if (!image) return;
@@ -83,10 +116,20 @@ export function ImageGenerator({ kind }: { kind: "LOGO" | "BANNER" }) {
             )}
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
-          <Button className="w-full" disabled={(!prompt && !file) || generate.isPending} onClick={() => generate.mutate()}>
-            <Sparkles className="h-4 w-4" />
-            {generate.isPending ? "Working…" : file ? `Improve ${label}` : `Generate ${label}`}
-          </Button>
+          {file ? (
+            <div className="flex gap-2">
+              <Button className="flex-1" disabled={busy} onClick={() => generate.mutate()}>
+                <Sparkles className="h-4 w-4" /> {generate.isPending ? "Working…" : `Improve ${label}`}
+              </Button>
+              <Button variant="secondary" className="flex-1" disabled={busy} onClick={() => removeBg.mutate(file)}>
+                {removeBg.isPending ? "Working…" : "Remove background"}
+              </Button>
+            </div>
+          ) : (
+            <Button className="w-full" disabled={!prompt || busy} onClick={() => generate.mutate()}>
+              <Sparkles className="h-4 w-4" /> {generate.isPending ? "Generating…" : `Generate ${label}`}
+            </Button>
+          )}
           <p className="text-xs text-muted-foreground">Uses your OpenAI image credits.</p>
         </CardContent>
       </Card>
@@ -98,10 +141,14 @@ export function ImageGenerator({ kind }: { kind: "LOGO" | "BANNER" }) {
             <div className="space-y-3">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={imageUrl(image.id)} alt={label} className="w-full rounded-md border bg-secondary" />
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <a href={imageUrl(image.id)} download={`${label}.png`} target="_blank" rel="noreferrer">
                   <Button variant="outline" size="sm"><Download className="h-4 w-4" /> Download</Button>
                 </a>
+                <Button variant="secondary" size="sm" disabled={busy}
+                  onClick={() => removeBg.mutate(imageUrl(image.id))}>
+                  {removeBg.isPending ? "…" : "Remove background"}
+                </Button>
                 <Button size="sm" onClick={attachToPost}><Send className="h-4 w-4" /> Use in a post</Button>
               </div>
             </div>
