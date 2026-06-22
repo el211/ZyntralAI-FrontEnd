@@ -30,21 +30,24 @@ const statusColor: Record<string, string> = {
 
 export default function PostsPage() {
   const { current } = useWorkspace();
-  const [composer, setComposer] = useState<{ open: boolean; body: string; aiGenerationId: string | null }>({
-    open: false,
-    body: "",
-    aiGenerationId: null,
-  });
+  const [composer, setComposer] = useState<{
+    open: boolean; body: string; mediaUrl: string | null; aiGenerationId: string | null;
+  }>({ open: false, body: "", mediaUrl: null, aiGenerationId: null });
 
-  // Opened from AI Studio's "Use in a post" — the generated content is handed over
-  // via sessionStorage, then we open the composer pre-filled and clear it.
+  // Opened from AI Studio / Library "Use in a post" — content or an image is handed
+  // over via sessionStorage, then we open the composer pre-filled and clear it.
   useEffect(() => {
     const raw = sessionStorage.getItem("zyntral_compose");
     if (raw) {
       sessionStorage.removeItem("zyntral_compose");
       try {
-        const { body, aiGenerationId } = JSON.parse(raw);
-        setComposer({ open: true, body: body ?? "", aiGenerationId: aiGenerationId ?? null });
+        const { body, mediaUrl, aiGenerationId } = JSON.parse(raw);
+        setComposer({
+          open: true,
+          body: body ?? "",
+          mediaUrl: mediaUrl ?? null,
+          aiGenerationId: aiGenerationId ?? null,
+        });
       } catch { /* ignore malformed payload */ }
     }
   }, []);
@@ -63,7 +66,7 @@ export default function PostsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Posts</h1>
-        <Button onClick={() => setComposer({ open: true, body: "", aiGenerationId: null })}>
+        <Button onClick={() => setComposer({ open: true, body: "", mediaUrl: null, aiGenerationId: null })}>
           <Plus className="h-4 w-4" /> New post
         </Button>
       </div>
@@ -93,6 +96,7 @@ export default function PostsPage() {
         open={composer.open}
         onClose={() => setComposer((c) => ({ ...c, open: false }))}
         initialBody={composer.body}
+        initialMediaUrl={composer.mediaUrl}
         aiGenerationId={composer.aiGenerationId}
       />
     </div>

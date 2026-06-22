@@ -12,6 +12,14 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Sparkles, Copy, Send } from "lucide-react";
+import { ImageGenerator } from "@/components/image-generator";
+
+const TABS = [
+  { id: "TEXT", label: "Text" },
+  { id: "LOGO", label: "Logo" },
+  { id: "BANNER", label: "Banner" },
+] as const;
+type StudioTab = (typeof TABS)[number]["id"];
 
 const KINDS: AiContentKind[] = [
   "LINKEDIN_POST", "X_POST", "INSTAGRAM_CAPTION", "TIKTOK_IDEA", "FACEBOOK_POST",
@@ -41,6 +49,7 @@ export default function AiStudioPage() {
   });
   const [result, setResult] = useState<GenerationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState<StudioTab>("TEXT");
 
   const { data: credits } = useQuery({
     queryKey: ["credits", current?.id],
@@ -75,6 +84,18 @@ export default function AiStudioPage() {
         )}
       </div>
 
+      <div className="flex w-fit gap-1 rounded-md border p-1">
+        {TABS.map((t) => (
+          <button key={t.id} onClick={() => setTab(t.id)}
+            className={`rounded px-3 py-1.5 text-sm ${tab === t.id ? "bg-primary text-primary-foreground" : "hover:bg-secondary"}`}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab !== "TEXT" && <ImageGenerator kind={tab} />}
+
+      {tab === "TEXT" && (
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader><CardTitle>Generate</CardTitle></CardHeader>
@@ -167,6 +188,7 @@ export default function AiStudioPage() {
           </CardContent>
         </Card>
       </div>
+      )}
     </div>
   );
 }

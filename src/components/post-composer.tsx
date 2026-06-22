@@ -27,24 +27,30 @@ export function PostComposer({
   open,
   onClose,
   initialBody = "",
+  initialMediaUrl,
   aiGenerationId,
 }: {
   open: boolean;
   onClose: () => void;
   initialBody?: string;
+  initialMediaUrl?: string | null;
   aiGenerationId?: string | null;
 }) {
   const { current } = useWorkspace();
   const qc = useQueryClient();
   const [title, setTitle] = useState("");
   const [body, setBody] = useState(initialBody);
+  const [mediaUrl, setMediaUrl] = useState<string | null>(initialMediaUrl ?? null);
   const [selected, setSelected] = useState<string[]>([]);
   const [scheduledAt, setScheduledAt] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (open) setBody(initialBody);
-  }, [open, initialBody]);
+    if (open) {
+      setBody(initialBody);
+      setMediaUrl(initialMediaUrl ?? null);
+    }
+  }, [open, initialBody, initialMediaUrl]);
 
   const { data: accounts = [] } = useQuery({
     queryKey: ["social-accounts", current?.id],
@@ -62,6 +68,7 @@ export function PostComposer({
   function reset() {
     setTitle("");
     setBody("");
+    setMediaUrl(null);
     setSelected([]);
     setScheduledAt("");
     setError(null);
@@ -75,6 +82,7 @@ export function PostComposer({
           body,
           socialAccountIds: selected,
           aiGenerationId: aiGenerationId ?? null,
+          media: mediaUrl ? [{ url: mediaUrl, mediaType: "image/png", altText: null }] : null,
         })).data,
       );
       if (action === "publish") {
@@ -95,7 +103,7 @@ export function PostComposer({
 
   if (!open) return null;
 
-  const canSubmit = body.trim().length > 0 && selected.length > 0 && !save.isPending;
+  const canSubmit = (body.trim().length > 0 || !!mediaUrl) && selected.length > 0 && !save.isPending;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
@@ -113,6 +121,17 @@ export function PostComposer({
             <Label htmlFor="post-body">Content</Label>
             <Textarea id="post-body" rows={8} value={body} onChange={(e) => setBody(e.target.value)} />
           </div>
+          {mediaUrl && (
+            <div className="space-y-2">
+              <Label>Attached image</Label>
+              <div className="relative w-fit">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={mediaUrl} alt="attachment" className="max-h-40 rounded-md border" />
+                <button type="button" onClick={() => setMediaUrl(null)}
+                  className="absolute right-1 top-1 rounded bg-background/80 px-1.5 py-0.5 text-xs">Remove</button>
+              </div>
+            </div>
+          )}
           <div className="space-y-2">
             <Label>Publish to</Label>
             {connected.length === 0 ? (

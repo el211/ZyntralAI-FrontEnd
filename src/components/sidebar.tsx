@@ -6,12 +6,13 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import {
   LayoutDashboard, Sparkles, FileText, CalendarDays, Share2,
-  CreditCard, Settings, Shield, LogOut,
+  CreditCard, Settings, Shield, LogOut, Images,
 } from "lucide-react";
 
 const nav = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/dashboard/ai", label: "AI Studio", icon: Sparkles },
+  { href: "/dashboard/library", label: "Library", icon: Images },
   { href: "/dashboard/posts", label: "Posts", icon: FileText },
   { href: "/dashboard/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/dashboard/social", label: "Social accounts", icon: Share2 },
