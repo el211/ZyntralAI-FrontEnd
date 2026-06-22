@@ -22,12 +22,28 @@ export function VideoGenerator() {
   const qc = useQueryClient();
   const [prompt, setPrompt] = useState("");
   const [aspectRatio, setAspectRatio] = useState("16:9");
+  const [resolution, setResolution] = useState("720p");
+  const [duration, setDuration] = useState("8");
+  const [file, setFile] = useState<File | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const generate = useMutation({
-    mutationFn: async () =>
-      unwrap<Video>((await api.post(`/workspaces/${current!.id}/ai/videos`, { prompt, aspectRatio })).data),
+    mutationFn: async () => {
+      const durationSeconds = Number(duration);
+      if (file) {
+        const fd = new FormData();
+        fd.append("prompt", prompt);
+        fd.append("aspectRatio", aspectRatio);
+        fd.append("resolution", resolution);
+        fd.append("durationSeconds", String(durationSeconds));
+        fd.append("image", file);
+        return unwrap<Video>((await api.post(`/workspaces/${current!.id}/ai/videos`, fd)).data);
+      }
+      return unwrap<Video>(
+        (await api.post(`/workspaces/${current!.id}/ai/videos`, { prompt, aspectRatio, resolution, durationSeconds })).data,
+      );
+    },
     onSuccess: (v) => {
       setJobId(v.id);
       setError(null);
@@ -59,12 +75,42 @@ export function VideoGenerator() {
               placeholder="e.g. a cinematic flythrough of a futuristic city at sunset, smooth camera motion"
               value={prompt} onChange={(e) => setPrompt(e.target.value)} />
           </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="space-y-2">
+              <Label>Format</Label>
+              <Select value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value)}>
+                <option value="16:9">16:9</option>
+                <option value="9:16">9:16</option>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Quality</Label>
+              <Select value={resolution} onChange={(e) => { setResolution(e.target.value); if (e.target.value !== "720p") setDuration("8"); }}>
+                <option value="720p">720p</option>
+                <option value="1080p">1080p</option>
+                <option value="4k">4K</option>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Length</Label>
+              <Select value={duration} onChange={(e) => setDuration(e.target.value)} disabled={resolution !== "720p"}>
+                <option value="4">4s</option>
+                <option value="6">6s</option>
+                <option value="8">8s</option>
+              </Select>
+            </div>
+          </div>
           <div className="space-y-2">
-            <Label>Format</Label>
-            <Select value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value)}>
-              <option value="16:9">Landscape 16:9 (YouTube)</option>
-              <option value="9:16">Portrait 9:16 (TikTok / Reels / Shorts)</option>
-            </Select>
+            <Label>Animate an image (optional · image-to-video)</Label>
+            <input type="file" accept="image/*"
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border file:bg-secondary file:px-3 file:py-1.5 file:text-sm" />
+            {file && (
+              <p className="text-xs text-muted-foreground">
+                Using <span className="font-medium">{file.name}</span> as the first frame ·{" "}
+                <button type="button" className="underline" onClick={() => setFile(null)}>remove</button>
+              </p>
+            )}
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           {status === "FAILED" && <p className="text-sm text-destructive">{job?.error || "Generation failed"}</p>}

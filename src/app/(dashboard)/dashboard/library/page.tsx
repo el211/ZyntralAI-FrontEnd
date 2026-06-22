@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { imageUrl, removeBgFromUrl } from "@/components/image-generator";
 import { videoUrl } from "@/components/video-generator";
-import { Download, Send, Scissors, Loader2 } from "lucide-react";
+import { Download, Send, Scissors, Loader2, Film } from "lucide-react";
 
 interface ImageItem { id: string; kind: string; prompt: string; createdAt: string; }
 interface VideoItem { id: string; status: string; prompt: string; error: string | null; createdAt: string; }
@@ -39,6 +39,11 @@ export default function LibraryPage() {
   const removeBg = useMutation({
     mutationFn: (id: string) => removeBgFromUrl(current!.id, imageUrl(id)),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["ai-images", current?.id] }),
+  });
+
+  const extend = useMutation({
+    mutationFn: (id: string) => api.post(`/workspaces/${current!.id}/ai/videos/${id}/extend`, { prompt: "" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["ai-videos", current?.id] }),
   });
 
   function attachToPost(id: string) {
@@ -114,9 +119,15 @@ export default function LibraryPage() {
                   <div className="flex items-center justify-between gap-2">
                     <span className="truncate text-xs text-muted-foreground">{v.prompt}</span>
                     {v.status === "COMPLETED" && (
-                      <a href={videoUrl(v.id)} download="video.mp4" target="_blank" rel="noreferrer">
-                        <Button variant="ghost" size="sm" title="Download"><Download className="h-4 w-4" /></Button>
-                      </a>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="sm" title="Extend (+~7s, 50 credits)"
+                          disabled={extend.isPending} onClick={() => extend.mutate(v.id)}>
+                          <Film className="h-4 w-4" />
+                        </Button>
+                        <a href={videoUrl(v.id)} download="video.mp4" target="_blank" rel="noreferrer">
+                          <Button variant="ghost" size="sm" title="Download"><Download className="h-4 w-4" /></Button>
+                        </a>
+                      </div>
                     )}
                   </div>
                 </CardContent>
