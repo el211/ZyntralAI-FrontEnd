@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { Sparkles, Download, Loader2 } from "lucide-react";
 
 export const videoUrl = (id: string) => `${API_URL}/videos/${id}`;
@@ -20,12 +21,13 @@ export function VideoGenerator() {
   const { current } = useWorkspace();
   const qc = useQueryClient();
   const [prompt, setPrompt] = useState("");
+  const [aspectRatio, setAspectRatio] = useState("16:9");
   const [jobId, setJobId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const generate = useMutation({
     mutationFn: async () =>
-      unwrap<Video>((await api.post(`/workspaces/${current!.id}/ai/videos`, { prompt })).data),
+      unwrap<Video>((await api.post(`/workspaces/${current!.id}/ai/videos`, { prompt, aspectRatio })).data),
     onSuccess: (v) => {
       setJobId(v.id);
       setError(null);
@@ -56,6 +58,13 @@ export function VideoGenerator() {
             <Textarea rows={6}
               placeholder="e.g. a cinematic flythrough of a futuristic city at sunset, smooth camera motion"
               value={prompt} onChange={(e) => setPrompt(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Format</Label>
+            <Select value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value)}>
+              <option value="16:9">Landscape 16:9 (YouTube)</option>
+              <option value="9:16">Portrait 9:16 (TikTok / Reels / Shorts)</option>
+            </Select>
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           {status === "FAILED" && <p className="text-sm text-destructive">{job?.error || "Generation failed"}</p>}
