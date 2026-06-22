@@ -1,10 +1,14 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api, unwrap } from "@/lib/api";
 import { useWorkspace } from "@/lib/workspace";
 import { Page } from "@/lib/types";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { PostComposer } from "@/components/post-composer";
+import { Plus } from "lucide-react";
 
 interface PostRow {
   id: string;
@@ -26,6 +30,25 @@ const statusColor: Record<string, string> = {
 
 export default function PostsPage() {
   const { current } = useWorkspace();
+  const [composer, setComposer] = useState<{ open: boolean; body: string; aiGenerationId: string | null }>({
+    open: false,
+    body: "",
+    aiGenerationId: null,
+  });
+
+  // Opened from AI Studio's "Use in a post" — the generated content is handed over
+  // via sessionStorage, then we open the composer pre-filled and clear it.
+  useEffect(() => {
+    const raw = sessionStorage.getItem("zyntral_compose");
+    if (raw) {
+      sessionStorage.removeItem("zyntral_compose");
+      try {
+        const { body, aiGenerationId } = JSON.parse(raw);
+        setComposer({ open: true, body: body ?? "", aiGenerationId: aiGenerationId ?? null });
+      } catch { /* ignore malformed payload */ }
+    }
+  }, []);
+
   const { data } = useQuery({
     queryKey: ["posts", current?.id],
     enabled: !!current,
@@ -38,10 +61,15 @@ export default function PostsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Posts</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">Posts</h1>
+        <Button onClick={() => setComposer({ open: true, body: "", aiGenerationId: null })}>
+          <Plus className="h-4 w-4" /> New post
+        </Button>
+      </div>
       {posts.length === 0 ? (
         <Card><CardContent className="p-10 text-center text-sm text-muted-foreground">
-          No posts yet. Generate content in the AI Studio and turn it into a post.
+          No posts yet. Click “New post”, or generate content in the AI Studio and turn it into a post.
         </CardContent></Card>
       ) : (
         <div className="space-y-3">
@@ -60,6 +88,13 @@ export default function PostsPage() {
           ))}
         </div>
       )}
+
+      <PostComposer
+        open={composer.open}
+        onClose={() => setComposer((c) => ({ ...c, open: false }))}
+        initialBody={composer.body}
+        aiGenerationId={composer.aiGenerationId}
+      />
     </div>
   );
 }

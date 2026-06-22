@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, unwrap, apiErrorMessage } from "@/lib/api";
 import { useWorkspace } from "@/lib/workspace";
@@ -10,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Sparkles, Copy } from "lucide-react";
+import { Sparkles, Copy, Send } from "lucide-react";
 
 const KINDS: AiContentKind[] = [
   "LINKEDIN_POST", "X_POST", "INSTAGRAM_CAPTION", "TIKTOK_IDEA", "FACEBOOK_POST",
@@ -24,6 +25,12 @@ const pretty = (s: string) => s.replace(/_/g, " ").toLowerCase().replace(/\b\w/g
 export default function AiStudioPage() {
   const { current } = useWorkspace();
   const qc = useQueryClient();
+  const router = useRouter();
+
+  function sendToPost(r: GenerationResult) {
+    sessionStorage.setItem("zyntral_compose", JSON.stringify({ body: r.output, aiGenerationId: r.id }));
+    router.push("/dashboard/posts");
+  }
   const [form, setForm] = useState({
     contentKind: "LINKEDIN_POST" as AiContentKind,
     tone: "PROFESSIONAL" as AiTone,
@@ -133,10 +140,15 @@ export default function AiStudioPage() {
           <CardHeader className="flex-row items-center justify-between">
             <CardTitle>Result</CardTitle>
             {result && (
-              <Button variant="ghost" size="sm"
-                onClick={() => navigator.clipboard.writeText(result.output)}>
-                <Copy className="h-4 w-4" /> Copy
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="sm"
+                  onClick={() => navigator.clipboard.writeText(result.output)}>
+                  <Copy className="h-4 w-4" /> Copy
+                </Button>
+                <Button size="sm" onClick={() => sendToPost(result)}>
+                  <Send className="h-4 w-4" /> Use in a post
+                </Button>
+              </div>
             )}
           </CardHeader>
           <CardContent>
