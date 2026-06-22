@@ -52,6 +52,7 @@ export function ImageGenerator({ kind }: { kind: "LOGO" | "BANNER" }) {
       setImage(data);
       setError(null);
       qc.invalidateQueries({ queryKey: ["ai-images", current?.id] });
+      qc.invalidateQueries({ queryKey: ["credits", current?.id] });
     },
     onError: (err) => setError(apiErrorMessage(err)),
   });
@@ -73,6 +74,7 @@ export function ImageGenerator({ kind }: { kind: "LOGO" | "BANNER" }) {
       setImage(data);
       setError(null);
       qc.invalidateQueries({ queryKey: ["ai-images", current?.id] });
+      qc.invalidateQueries({ queryKey: ["credits", current?.id] });
     },
     onError: (err) => setError(apiErrorMessage(err)),
   });
@@ -130,7 +132,7 @@ export function ImageGenerator({ kind }: { kind: "LOGO" | "BANNER" }) {
               <Sparkles className="h-4 w-4" /> {generate.isPending ? "Generating…" : `Generate ${label}`}
             </Button>
           )}
-          <p className="text-xs text-muted-foreground">Uses your OpenAI image credits.</p>
+          <p className="text-xs text-muted-foreground">Each image uses 5 credits.</p>
         </CardContent>
       </Card>
 
