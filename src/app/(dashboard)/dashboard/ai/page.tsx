@@ -14,12 +14,14 @@ import { Label } from "@/components/ui/label";
 import { Sparkles, Copy, Send } from "lucide-react";
 import { ImageGenerator } from "@/components/image-generator";
 import { VideoGenerator } from "@/components/video-generator";
+import { SpeechGenerator } from "@/components/speech-generator";
 
 const TABS = [
   { id: "TEXT", label: "Text" },
   { id: "LOGO", label: "Logo" },
   { id: "BANNER", label: "Banner" },
   { id: "VIDEO", label: "Video" },
+  { id: "SPEECH", label: "Speech" },
 ] as const;
 type StudioTab = (typeof TABS)[number]["id"];
 
@@ -97,6 +99,7 @@ export default function AiStudioPage() {
 
       {(tab === "LOGO" || tab === "BANNER") && <ImageGenerator kind={tab} />}
       {tab === "VIDEO" && <VideoGenerator />}
+      {tab === "SPEECH" && <SpeechGenerator />}
 
       {tab === "TEXT" && (
       <div className="grid gap-6 lg:grid-cols-2">
