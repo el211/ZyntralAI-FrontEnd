@@ -8,10 +8,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { imageUrl, removeBgFromUrl } from "@/components/image-generator";
 import { videoUrl } from "@/components/video-generator";
+import { audioUrl } from "@/components/speech-generator";
 import { Download, Send, Scissors, Loader2, Film } from "lucide-react";
 
 interface ImageItem { id: string; kind: string; prompt: string; createdAt: string; }
 interface VideoItem { id: string; status: string; prompt: string; error: string | null; createdAt: string; }
+interface AudioItem { id: string; textExcerpt: string; voice: string | null; createdAt: string; }
 
 export default function LibraryPage() {
   const { current } = useWorkspace();
@@ -34,6 +36,13 @@ export default function LibraryPage() {
     },
     queryFn: async () =>
       unwrap<VideoItem[]>((await api.get(`/workspaces/${current!.id}/ai/videos`)).data),
+  });
+
+  const { data: clips = [] } = useQuery({
+    queryKey: ["ai-audio", current?.id],
+    enabled: !!current,
+    queryFn: async () =>
+      unwrap<AudioItem[]>((await api.get(`/workspaces/${current!.id}/ai/audio`)).data),
   });
 
   const removeBg = useMutation({
@@ -129,6 +138,33 @@ export default function LibraryPage() {
                         </a>
                       </div>
                     )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-sm font-medium text-muted-foreground">Voiceovers</h2>
+        {clips.length === 0 ? (
+          <Card><CardContent className="p-8 text-center text-sm text-muted-foreground">
+            No audio yet. Generate speech in the AI Studio → Speech tab.
+          </CardContent></Card>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {clips.map((a) => (
+              <Card key={a.id}>
+                <CardContent className="space-y-2 p-3">
+                  <p className="line-clamp-2 text-sm">{a.textExcerpt}</p>
+                  {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                  <audio src={audioUrl(a.id)} controls className="w-full" />
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="truncate text-xs text-muted-foreground">{a.voice || "voice"}</span>
+                    <a href={audioUrl(a.id)} download="speech.mp3" target="_blank" rel="noreferrer">
+                      <Button variant="ghost" size="sm" title="Download"><Download className="h-4 w-4" /></Button>
+                    </a>
                   </div>
                 </CardContent>
               </Card>
