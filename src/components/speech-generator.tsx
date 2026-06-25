@@ -7,9 +7,10 @@ import { useWorkspace } from "@/lib/workspace";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
-import { Volume2, Download } from "lucide-react";
+import { Volume2, Download, KeyRound } from "lucide-react";
 
 export const audioUrl = (id: string) => `${API_URL}/ai-audio/${id}`;
 
@@ -22,6 +23,33 @@ export function SpeechGenerator() {
   const [voiceId, setVoiceId] = useState("");
   const [audio, setAudio] = useState<{ id: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [keyInput, setKeyInput] = useState("");
+  const [showKey, setShowKey] = useState(false);
+
+  const { data: keyStatus } = useQuery({
+    queryKey: ["tts-key", current?.id],
+    enabled: !!current,
+    queryFn: async () =>
+      unwrap<{ usingOwnKey: boolean }>((await api.get(`/workspaces/${current!.id}/ai/audio/key`)).data),
+  });
+  const usingOwnKey = keyStatus?.usingOwnKey ?? false;
+
+  const saveKey = useMutation({
+    mutationFn: async () => api.put(`/workspaces/${current!.id}/ai/audio/key`, { apiKey: keyInput.trim() }),
+    onSuccess: () => {
+      setKeyInput(""); setShowKey(false);
+      qc.invalidateQueries({ queryKey: ["tts-key", current?.id] });
+      qc.invalidateQueries({ queryKey: ["voices", current?.id] });
+    },
+    onError: (err) => setError(apiErrorMessage(err)),
+  });
+  const removeKey = useMutation({
+    mutationFn: async () => api.delete(`/workspaces/${current!.id}/ai/audio/key`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tts-key", current?.id] });
+      qc.invalidateQueries({ queryKey: ["voices", current?.id] });
+    },
+  });
 
   const { data: voices = [] } = useQuery({
     queryKey: ["voices", current?.id],
@@ -65,7 +93,34 @@ export function SpeechGenerator() {
           <Button className="w-full" disabled={!text.trim() || generate.isPending} onClick={() => generate.mutate()}>
             <Volume2 className="h-4 w-4" /> {generate.isPending ? "Generating…" : "Generate speech"}
           </Button>
-          <p className="text-xs text-muted-foreground">Each clip uses 3 credits.</p>
+          <p className="text-xs text-muted-foreground">
+            {usingOwnKey
+              ? "Using your own ElevenLabs key — no Zyntral credits used."
+              : "Each clip uses 3 credits, or add your own ElevenLabs key below to use none."}
+          </p>
+
+          <div className="space-y-2 rounded-md border p-3">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <KeyRound className="h-4 w-4" /> Your ElevenLabs key
+              {usingOwnKey && <span className="rounded-full bg-green-500/15 px-2 py-0.5 text-xs text-green-500">Active</span>}
+            </div>
+            {usingOwnKey ? (
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs text-muted-foreground">Generations use your key (no credits).</span>
+                <Button size="sm" variant="outline" disabled={removeKey.isPending} onClick={() => removeKey.mutate()}>
+                  Remove
+                </Button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <Input type={showKey ? "text" : "password"} placeholder="sk_…"
+                  value={keyInput} onChange={(e) => setKeyInput(e.target.value)} />
+                <Button size="sm" variant="outline" onClick={() => setShowKey((s) => !s)}>{showKey ? "Hide" : "Show"}</Button>
+                <Button size="sm" disabled={!keyInput.trim() || saveKey.isPending} onClick={() => saveKey.mutate()}>Save</Button>
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">Stored encrypted. Get one at elevenlabs.io → API Keys.</p>
+          </div>
         </CardContent>
       </Card>
 
