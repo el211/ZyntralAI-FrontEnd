@@ -58,6 +58,23 @@ export function SpeechGenerator() {
       unwrap<Voice[]>((await api.get(`/workspaces/${current!.id}/ai/audio/voices`)).data),
   });
 
+  const [cloneName, setCloneName] = useState("");
+  const [cloneFiles, setCloneFiles] = useState<FileList | null>(null);
+  const clone = useMutation({
+    mutationFn: async () => {
+      const fd = new FormData();
+      fd.append("name", cloneName.trim());
+      Array.from(cloneFiles ?? []).forEach((f) => fd.append("files", f));
+      return unwrap<Voice>((await api.post(`/workspaces/${current!.id}/ai/audio/voices/clone`, fd)).data);
+    },
+    onSuccess: (v) => {
+      setCloneName(""); setCloneFiles(null); setError(null);
+      qc.invalidateQueries({ queryKey: ["voices", current?.id] });
+      setVoiceId(v.voiceId);
+    },
+    onError: (err) => setError(apiErrorMessage(err)),
+  });
+
   const generate = useMutation({
     mutationFn: async () =>
       unwrap<{ id: string }>(
@@ -121,6 +138,24 @@ export function SpeechGenerator() {
             )}
             <p className="text-xs text-muted-foreground">Stored encrypted. Get one at elevenlabs.io → API Keys.</p>
           </div>
+
+          {usingOwnKey && (
+            <div className="space-y-2 rounded-md border p-3">
+              <div className="text-sm font-medium">Clone your voice</div>
+              <Input placeholder="Voice name (e.g. My voice)"
+                value={cloneName} onChange={(e) => setCloneName(e.target.value)} />
+              <input type="file" accept="audio/*" multiple
+                onChange={(e) => setCloneFiles(e.target.files)}
+                className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border file:bg-secondary file:px-3 file:py-1.5 file:text-sm" />
+              <Button size="sm" disabled={!cloneName.trim() || !cloneFiles?.length || clone.isPending}
+                onClick={() => clone.mutate()}>
+                {clone.isPending ? "Cloning…" : "Create cloned voice"}
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Upload 1+ min of clean speech. Needs a paid ElevenLabs plan with cloning. The voice is added to your account and appears in the dropdown above.
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
