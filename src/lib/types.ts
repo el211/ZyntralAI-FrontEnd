@@ -69,3 +69,20 @@ export interface Page<T> {
   totalPages: number;
   hasNext: boolean;
 }
+
+// ---- Dubbing (ElevenLabs, BYOK) ----
+export type DubbingStatus = "QUEUED" | "DUBBING" | "DUBBED" | "FAILED";
+
+export interface DubbingJob {
+  id: string;
+  name: string | null;
+  sourceLang: string | null;
+  targetLang: string;
+  status: DubbingStatus;
+  error: string | null;
+  createdAt: string;
+}
+
+export interface CredentialStatus {
+  configured: boolean;
+}

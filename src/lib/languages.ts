@@ -1,0 +1,35 @@
+// Languages supported by ElevenLabs Dubbing (target + source). Code → display name.
+export const DUB_LANGUAGES: { code: string; label: string }[] = [
+  { code: "en", label: "English" },
+  { code: "de", label: "German" },
+  { code: "es", label: "Spanish" },
+  { code: "fr", label: "French" },
+  { code: "it", label: "Italian" },
+  { code: "pt", label: "Portuguese" },
+  { code: "pl", label: "Polish" },
+  { code: "nl", label: "Dutch" },
+  { code: "tr", label: "Turkish" },
+  { code: "ru", label: "Russian" },
+  { code: "uk", label: "Ukrainian" },
+  { code: "cs", label: "Czech" },
+  { code: "sk", label: "Slovak" },
+  { code: "hr", label: "Croatian" },
+  { code: "ro", label: "Romanian" },
+  { code: "bg", label: "Bulgarian" },
+  { code: "el", label: "Greek" },
+  { code: "da", label: "Danish" },
+  { code: "fi", label: "Finnish" },
+  { code: "sv", label: "Swedish" },
+  { code: "ar", label: "Arabic" },
+  { code: "hi", label: "Hindi" },
+  { code: "ta", label: "Tamil" },
+  { code: "zh", label: "Chinese" },
+  { code: "ja", label: "Japanese" },
+  { code: "ko", label: "Korean" },
+  { code: "id", label: "Indonesian" },
+  { code: "ms", label: "Malay" },
+  { code: "fil", label: "Filipino" },
+];
+
+export const languageLabel = (code: string | null | undefined): string =>
+  (code && DUB_LANGUAGES.find((l) => l.code === code)?.label) || (code ?? "Auto-detect");

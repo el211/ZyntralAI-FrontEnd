@@ -15,6 +15,7 @@ import { Sparkles, Copy, Send } from "lucide-react";
 import { ImageGenerator } from "@/components/image-generator";
 import { VideoGenerator } from "@/components/video-generator";
 import { SpeechGenerator } from "@/components/speech-generator";
+import { DubbingTab } from "./dubbing-tab";
 
 const TABS = [
   { id: "TEXT", label: "Text" },
@@ -22,6 +23,7 @@ const TABS = [
   { id: "BANNER", label: "Banner" },
   { id: "VIDEO", label: "Video" },
   { id: "SPEECH", label: "Speech" },
+  { id: "DUBBING", label: "Video dubbing" },
 ] as const;
 type StudioTab = (typeof TABS)[number]["id"];
 
@@ -100,6 +102,7 @@ export default function AiStudioPage() {
       {(tab === "LOGO" || tab === "BANNER") && <ImageGenerator kind={tab} />}
       {tab === "VIDEO" && <VideoGenerator />}
       {tab === "SPEECH" && <SpeechGenerator />}
+      {tab === "DUBBING" && <DubbingTab />}
 
       {tab === "TEXT" && (
       <div className="grid gap-6 lg:grid-cols-2">
