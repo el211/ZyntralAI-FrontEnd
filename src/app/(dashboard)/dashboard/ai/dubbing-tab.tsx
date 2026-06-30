@@ -20,24 +20,31 @@ export function DubbingTab() {
   const qc = useQueryClient();
   const wsId = current?.id;
 
-  // --- ElevenLabs API key (BYOK) ---
-  const cred = useQuery({
+  // --- ElevenLabs API key (BYOK, shared with the Speech tab) ---
+  const { data: cred } = useQuery({
     queryKey: ["dub-cred", wsId],
     enabled: !!wsId,
     queryFn: async () =>
       unwrap<CredentialStatus>((await api.get(`/workspaces/${wsId}/dubbing/credential`)).data),
   });
+  const configured = cred?.configured ?? false;
 
-  const [apiKey, setApiKey] = useState("");
+  const [keyInput, setKeyInput] = useState("");
+  const [showKey, setShowKey] = useState(false);
   const saveKey = useMutation({
     mutationFn: async () =>
-      unwrap<CredentialStatus>(
-        (await api.put(`/workspaces/${wsId}/dubbing/credential`, { apiKey })).data,
-      ),
+      api.put(`/workspaces/${wsId}/dubbing/credential`, { apiKey: keyInput.trim() }),
     onSuccess: () => {
-      setApiKey("");
+      setKeyInput("");
+      setShowKey(false);
       qc.invalidateQueries({ queryKey: ["dub-cred", wsId] });
     },
+    onError: (e) => setError(apiErrorMessage(e)),
+  });
+  const removeKey = useMutation({
+    mutationFn: async () => api.delete(`/workspaces/${wsId}/dubbing/credential`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["dub-cred", wsId] }),
+    onError: (e) => setError(apiErrorMessage(e)),
   });
 
   // --- dub form ---
@@ -104,47 +111,7 @@ export function DubbingTab() {
 
   if (!current) return <p className="text-muted-foreground">Select a workspace first.</p>;
 
-  // Gate the whole tab behind having an API key saved.
-  if (cred.data && !cred.data.configured) {
-    return (
-      <Card className="max-w-xl">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <KeyRound className="h-5 w-5" /> Connect ElevenLabs
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Dubbing uses your own ElevenLabs account, so usage is billed directly to you. Paste an
-            API key from{" "}
-            <a
-              href="https://elevenlabs.io/app/settings/api-keys"
-              target="_blank"
-              rel="noreferrer"
-              className="underline"
-            >
-              ElevenLabs → API Keys
-            </a>
-            . It is encrypted at rest.
-          </p>
-          <div className="space-y-2">
-            <Label>ElevenLabs API key</Label>
-            <Input
-              type="password"
-              placeholder="sk_..."
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-            />
-          </div>
-          <Button disabled={!apiKey || saveKey.isPending} onClick={() => saveKey.mutate()}>
-            {saveKey.isPending ? "Saving…" : "Save key"}
-          </Button>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const current_ = job.data;
+  const activeJob = job.data;
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
@@ -197,15 +164,67 @@ export function DubbingTab() {
           {error && <p className="text-sm text-destructive">{error}</p>}
           <Button
             className="w-full"
-            disabled={!file || submit.isPending}
+            disabled={!file || !configured || submit.isPending}
             onClick={() => submit.mutate()}
           >
             <Languages className="h-4 w-4" />
             {submit.isPending ? "Uploading…" : "Dub video"}
           </Button>
           <p className="text-xs text-muted-foreground">
-            Keeps the original speaker&apos;s voice. Longer videos take a few minutes.
+            {configured
+              ? "Keeps the original speaker's voice — uses your ElevenLabs key, no Zyntral credits. Longer videos take a few minutes."
+              : "Add your ElevenLabs key below to start dubbing."}
           </p>
+
+          {/* ElevenLabs key — same key as the Speech tab */}
+          <div className="space-y-2 rounded-md border p-3">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <KeyRound className="h-4 w-4" /> Your ElevenLabs key
+              {configured && (
+                <span className="rounded-full bg-green-500/15 px-2 py-0.5 text-xs text-green-500">
+                  Active
+                </span>
+              )}
+            </div>
+            {configured ? (
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs text-muted-foreground">
+                  Dubbing uses your key (no credits) — shared with Speech.
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={removeKey.isPending}
+                  onClick={() => removeKey.mutate()}
+                >
+                  Remove
+                </Button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <Input
+                  type={showKey ? "text" : "password"}
+                  placeholder="sk_…"
+                  value={keyInput}
+                  onChange={(e) => setKeyInput(e.target.value)}
+                />
+                <Button size="sm" variant="outline" onClick={() => setShowKey((s) => !s)}>
+                  {showKey ? "Hide" : "Show"}
+                </Button>
+                <Button
+                  size="sm"
+                  disabled={!keyInput.trim() || saveKey.isPending}
+                  onClick={() => saveKey.mutate()}
+                >
+                  Save
+                </Button>
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Stored encrypted. Get one at elevenlabs.io → API Keys. Same key as the Speech tab;
+              dubbing needs an ElevenLabs plan that allows dubbing.
+            </p>
+          </div>
         </CardContent>
       </Card>
 
@@ -214,32 +233,32 @@ export function DubbingTab() {
           <CardTitle>Result</CardTitle>
         </CardHeader>
         <CardContent>
-          {!current_ ? (
+          {!activeJob ? (
             <p className="py-10 text-center text-sm text-muted-foreground">
               Your dubbed video will appear here.
             </p>
           ) : (
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm">
-                {current_.status === "DUBBED" && (
+                {activeJob.status === "DUBBED" && (
                   <CheckCircle2 className="h-4 w-4 text-green-600" />
                 )}
-                {current_.status === "FAILED" && <XCircle className="h-4 w-4 text-destructive" />}
-                {isActive(current_.status) && <Loader2 className="h-4 w-4 animate-spin" />}
+                {activeJob.status === "FAILED" && <XCircle className="h-4 w-4 text-destructive" />}
+                {isActive(activeJob.status) && <Loader2 className="h-4 w-4 animate-spin" />}
                 <span>
-                  {current_.status === "DUBBED"
+                  {activeJob.status === "DUBBED"
                     ? "Done"
-                    : current_.status === "FAILED"
+                    : activeJob.status === "FAILED"
                       ? "Failed"
                       : "Dubbing…"}{" "}
-                  · {languageLabel(current_.sourceLang)} → {languageLabel(current_.targetLang)}
+                  · {languageLabel(activeJob.sourceLang)} → {languageLabel(activeJob.targetLang)}
                 </span>
               </div>
-              {current_.status === "FAILED" && current_.error && (
-                <p className="text-sm text-destructive">{current_.error}</p>
+              {activeJob.status === "FAILED" && activeJob.error && (
+                <p className="text-sm text-destructive">{activeJob.error}</p>
               )}
-              {current_.status === "DUBBED" && (
-                <Button disabled={downloading} onClick={() => download(current_.id)}>
+              {activeJob.status === "DUBBED" && (
+                <Button disabled={downloading} onClick={() => download(activeJob.id)}>
                   <Download className="h-4 w-4" />
                   {downloading ? "Preparing…" : "Download dubbed video"}
                 </Button>
