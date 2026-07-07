@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Languages, Download, KeyRound, Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { Languages, Download, KeyRound, Loader2, CheckCircle2, XCircle, Music } from "lucide-react";
 
 const isActive = (s?: DubbingStatus) => s === "QUEUED" || s === "DUBBING";
 
@@ -99,7 +99,7 @@ export function DubbingTab() {
       const url = URL.createObjectURL(res.data as Blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `dubbed-${jobId}.mp4`;
+      a.download = `dubbed-${jobId}.mp3`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {
@@ -118,15 +118,15 @@ export function DubbingTab() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Languages className="h-5 w-5" /> Dub a video
+            <Music className="h-5 w-5" /> Dub an audio file
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label>Video file</Label>
+            <Label>Audio file (MP3)</Label>
             <Input
               type="file"
-              accept="video/*"
+              accept="audio/*,.mp3,.wav,.m4a"
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
             />
           </div>
@@ -168,11 +168,11 @@ export function DubbingTab() {
             onClick={() => submit.mutate()}
           >
             <Languages className="h-4 w-4" />
-            {submit.isPending ? "Uploading…" : "Dub video"}
+            {submit.isPending ? "Uploading…" : "Dub audio"}
           </Button>
           <p className="text-xs text-muted-foreground">
             {configured
-              ? "Keeps the original speaker's voice — uses your ElevenLabs key, no Zyntral credits. Longer videos take a few minutes."
+              ? "Keeps the original speaker's voice — uses your ElevenLabs key, no Zyntral credits. Longer files take a few minutes."
               : "Add your ElevenLabs key below to start dubbing."}
           </p>
 
@@ -235,7 +235,7 @@ export function DubbingTab() {
         <CardContent>
           {!activeJob ? (
             <p className="py-10 text-center text-sm text-muted-foreground">
-              Your dubbed video will appear here.
+              Your dubbed audio will appear here.
             </p>
           ) : (
             <div className="space-y-3">
@@ -260,7 +260,7 @@ export function DubbingTab() {
               {activeJob.status === "DUBBED" && (
                 <Button disabled={downloading} onClick={() => download(activeJob.id)}>
                   <Download className="h-4 w-4" />
-                  {downloading ? "Preparing…" : "Download dubbed video"}
+                  {downloading ? "Preparing…" : "Download dubbed audio"}
                 </Button>
               )}
             </div>
